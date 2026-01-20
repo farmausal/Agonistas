@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curvas Dosis-Respuesta</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 90%;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        canvas {
+            max-width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Curvas Dosis-Respuesta</h2>
+        <canvas id="chart"></canvas>
+    </div>
+
+    <script>
+        // Generar datos para las curvas sigmoidales
+        function generateSigmoidData(maxResponse, ec50, hillSlope) {
+            const data = [];
+            for (let x = -10; x <= -5; x += 0.1) {
+                const y = maxResponse / (1 + Math.pow(10, (ec50 - x) * hillSlope));
+                data.push({x: x, y: y});
+            }
+            return data;
+        }
+
+        // Datos para agonista completo (alcanza respuesta máxima = 1.0)
+        const agonistaCompleto = generateSigmoidData(1.02, -7.5, 1.5);
+        
+        // Datos para agonista parcial (alcanza respuesta máxima = 0.42)
+        const agonistaParcial = generateSigmoidData(0.42, -7.8, 1.2);
+
+        const ctx = document.getElementById('chart').getContext('2d');
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Agonista completo',
+                    data: agonistaCompleto,
+                    borderColor: '#00a8e8',
+                    backgroundColor: 'rgba(0, 168, 232, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0.4
+                }, {
+                    label: 'Agonista parcial',
+                    data: agonistaParcial,
+                    borderColor: '#88c999',
+                    backgroundColor: 'rgba(136, 201, 153, 0.1)',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top',
+                        labels: {
+                            font: {
+                                size: 14
+                            },
+                            usePointStyle: true,
+                            padding: 15
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        title: {
+                            display: true,
+                            text: 'Registro (agonista completo o agonista parcial)',
+                            font: {
+                                size: 14,
+                                weight: 'normal'
+                            }
+                        },
+                        min: -10,
+                        max: -5,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: false
+                        },
+                        min: 0,
+                        max: 1.05,
+                        ticks: {
+                            stepSize: 0.2,
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+    </script>
+</body>
+</html>
