@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Índice Terapéutico</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 1600px;
+            height: 100%;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 15px;
+        }
+
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+        }
+
+        .controls-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 18px;
+            color: #2d3748;
+            font-weight: 600;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+
+        .slider-group {
+            margin-bottom: 20px;
+        }
+
+        .slider-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: #4a5568;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            height: 6px;
+            margin-top: 5px;
+            border-radius: 5px;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            border: 2px solid #667eea;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+            border: 2px solid #667eea;
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .chart-card {
+            flex: 0 0 auto;
+            height: calc(100vh - 220px);
+        }
+
+        .chart-container {
+            position: relative;
+            height: calc(100% - 50px);
+            background: #f7fafc;
+            border-radius: 8px;
+            padding: 10px;
+        }
+
+        .params-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            height: 180px;
+            flex-shrink: 0;
+        }
+
+        .params-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .param-item {
+            border-left: 3px solid #667eea;
+            padding-left: 15px;
+        }
+
+        .param-item h3 {
+            font-size: 0.95rem;
+            color: #2d3748;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .param-item p {
+            font-size: 0.75rem;
+            color: #64748b;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .param-formula {
+            font-size: 0.8rem;
+            color: #475569;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .param-value {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+        }
+
+        .safety-label {
+            display: inline-block;
+            margin-left: 10px;
+            padding: 4px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 1200px) {
+            .container {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto;
+            }
+            .params-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <div class="card controls-card">
+                <h2>Controles</h2>
+                
+                <div class="slider-group">
+                    <label>DE₅₀: <span id="de50-value">[50mg] Log=1.70</span></label>
+                    <input type="range" id="de50-slider" min="0" max="20" step="1" value="10" oninput="updateParameters()">
+                </div>
+
+                <div class="slider-group">
+                    <label>DL₅₀: <span id="dl50-value">[200mg] Log=2.30</span></label>
+                    <input type="range" id="dl50-slider" min="0" max="20" step="1" value="11" oninput="updateParameters()">
+                </div>
+
+                <div class="slider-group">
+                    <label>Pendiente de Hill: <span id="hill-value">1.5</span></label>
+                    <input type="range" id="hill-slider" min="0" max="9" step="1" value="4" oninput="updateParameters()">
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="card chart-card">
+                <h2>Gráfica Dosis-Respuesta</h2>
+                <div class="chart-container">
+                    <canvas id="main-chart"></canvas>
+                </div>
+            </div>
+
+            <div class="params-card">
+                <div class="params-grid">
+                    <div class="param-item">
+                        <h3>Índice Terapéutico (IT)</h3>
+                        <p>Medida aproximada de la seguridad relativa de un fármaco expresada como la fracción entre la DL₅₀ y la DE₅₀. Cuanto mayor sea el IT mayor será la seguridad relativa del fármaco.</p>
+                        <div class="param-formula">IT = DL₅₀ / DE₅₀</div>
+                        <span class="param-value" id="it-result">4.00</span>
+                        <span class="safety-label" id="it-label">Seguro</span>
+                    </div>
+
+                    <div class="param-item">
+                        <h3>Margen de Seguridad (MS)</h3>
+                        <p>Parámetro que relaciona la dosis letal mínima (DL₁) con la dosis efectiva máxima (DE₉₉). Indica cuán amplio es el intervalo entre una dosis que produce efectos adversos en pocos individuos y la que genera efectos terapéuticos en la mayoría.</p>
+                        <div class="param-formula">MS = DL₁ / DE₉₉</div>
+                        <span class="param-value" id="ms-result">1.86</span>
+                        <span class="safety-label" id="ms-label">Poco seguro</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        var mainChart = null;
+        
+        var state = {
+            de50: 50,
+            dl50: 200,
+            hillCoeff: 1.5
+        };
+
+        var de50Values = [1, 2, 3, 5, 7, 10, 15, 20, 30, 40, 50, 70, 90, 120, 150, 200, 250, 300, 400, 500, 600];
+        var dl50Values = [2, 4, 6, 10, 15, 22, 33, 48, 70, 100, 140, 200, 280, 390, 540, 750, 1050, 1450, 2000, 2750, 3800];
+        var hillValues = [0.8, 1.0, 1.2, 1.5, 1.8, 2.0, 2.5, 2.8, 3.0, 3.5];
+
+        function hillEquation(dose, ec50, hillCoeff) {
+            if (dose <= 0 || ec50 <= 0) return 0;
+            var doseN = Math.pow(dose, hillCoeff);
+            var ec50N = Math.pow(ec50, hillCoeff);
+            return 100 * (doseN / (ec50N + doseN));
+        }
+
+        function findDoseAtResponse(ec50, hillCoeff, targetResponse) {
+            if (targetResponse <= 0) return 0;
+            if (targetResponse >= 100) return ec50 * 1000;
+            
+            var fraction = targetResponse / (100 - targetResponse);
+            return ec50 * Math.pow(fraction, 1 / hillCoeff);
+        }
+
+        function gaussianFromSigmoid(dose, ec50, hillCoeff) {
+            if (dose <= 0 || ec50 <= 0) return 0;
+            
+            var logDose = Math.log10(dose);
+            var logEC50 = Math.log10(ec50);
+            
+            var sigma = 0.8 / hillCoeff;
+            var amplitude = 30;
+            
+            var exponent = -Math.pow(logDose - logEC50, 2) / (2 * sigma * sigma);
+            return amplitude * Math.exp(exponent);
+        }
+
+        function generateCurveData() {
+            var therapeuticSigmoid = [];
+            var toxicSigmoid = [];
+            var therapeuticGaussian = [];
+            var toxicGaussian = [];
+            
+            for (var logDose = -4; logDose <= 4; logDose += 0.02) {
+                var dose = Math.pow(10, logDose);
+                
+                var therapResp = hillEquation(dose, state.de50, state.hillCoeff);
+                var toxicResp = hillEquation(dose, state.dl50, state.hillCoeff);
+                
+                therapeuticSigmoid.push({ x: logDose, y: therapResp });
+                toxicSigmoid.push({ x: logDose, y: toxicResp });
+                
+                var therapGauss = gaussianFromSigmoid(dose, state.de50, state.hillCoeff);
+                var toxicGauss = gaussianFromSigmoid(dose, state.dl50, state.hillCoeff);
+                
+                therapeuticGaussian.push({ x: logDose, y: therapGauss });
+                toxicGaussian.push({ x: logDose, y: toxicGauss });
+            }
+            
+            return {
+                therapeuticSigmoid: therapeuticSigmoid,
+                toxicSigmoid: toxicSigmoid,
+                therapeuticGaussian: therapeuticGaussian,
+                toxicGaussian: toxicGaussian
+            };
+        }
+
+        function updateChart() {
+            var curves = generateCurveData();
+            
+            var logDE50 = state.de50 > 0 ? Math.log10(state.de50) : -4;
+            var logDL50 = state.dl50 > 0 ? Math.log10(state.dl50) : -4;
+            
+            var de50Point = { x: logDE50, y: 50 };
+            var dl50Point = { x: logDL50, y: 50 };
+            
+            if (mainChart) {
+                mainChart.data.datasets[0].data = curves.therapeuticSigmoid;
+                mainChart.data.datasets[1].data = curves.toxicSigmoid;
+                mainChart.data.datasets[2].data = curves.therapeuticGaussian;
+                mainChart.data.datasets[3].data = curves.toxicGaussian;
+                mainChart.data.datasets[4].data = [de50Point];
+                mainChart.data.datasets[5].data = [dl50Point];
+                mainChart.update('none');
+                return;
+            }
+            
+            var datasets = [
+                {
+                    label: 'Efecto Terapéutico',
+                    data: curves.therapeuticSigmoid,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    order: 2
+                },
+                {
+                    label: 'Efecto Tóxico',
+                    data: curves.toxicSigmoid,
+                    borderColor: '#ef4444',
+                    backgroundColor: 'transparent',
+                    borderWidth: 3,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    order: 2
+                },
+                {
+                    label: 'Gaussiana Terapéutica',
+                    data: curves.therapeuticGaussian,
+                    borderColor: 'rgba(59, 130, 246, 0.6)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.25)',
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    order: 3
+                },
+                {
+                    label: 'Gaussiana Tóxica',
+                    data: curves.toxicGaussian,
+                    borderColor: 'rgba(239, 68, 68, 0.6)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.25)',
+                    fill: true,
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    tension: 0.4,
+                    order: 3
+                },
+                {
+                    label: '',
+                    data: [de50Point],
+                    borderColor: '#3b82f6',
+                    backgroundColor: '#3b82f6',
+                    pointRadius: 8,
+                    pointStyle: 'circle',
+                    showLine: false,
+                    order: 1
+                },
+                {
+                    label: '',
+                    data: [dl50Point],
+                    borderColor: '#ef4444',
+                    backgroundColor: '#ef4444',
+                    pointRadius: 8,
+                    pointStyle: 'circle',
+                    showLine: false,
+                    order: 1
+                }
+            ];
+
+            var config = {
+                type: 'line',
+                data: { datasets: datasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            title: { 
+                                display: true, 
+                                text: 'LogC (mg)',
+                                font: { size: 13, weight: 'bold' }
+                            },
+                            min: -4,
+                            max: 4,
+                            grid: { color: '#e2e8f0' },
+                            ticks: {
+                                callback: function(value) {
+                                    return value.toFixed(0);
+                                }
+                            }
+                        },
+                        y: {
+                            type: 'linear',
+                            title: { 
+                                display: true, 
+                                text: 'Sujetos en los que se observó efecto/toxicidad (%)',
+                                font: { size: 13, weight: 'bold' }
+                            },
+                            min: 0,
+                            max: 100,
+                            grid: { color: '#e2e8f0' }
+                        }
+                    },
+                    parsing: {
+                        xAxisKey: 'x',
+                        yAxisKey: 'y'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            labels: {
+                                font: { size: 10 },
+                                boxWidth: 12,
+                                padding: 8,
+                                filter: function(item) {
+                                    return item.text !== '' && !item.text.includes('Gaussiana');
+                                }
+                            }
+                        },
+                        tooltip: {
+                            enabled: true
+                        }
+                    }
+                },
+                plugins: [{
+                    id: 'labelPoints',
+                    afterDatasetsDraw: function(chart) {
+                        var ctx = chart.ctx;
+                        var xScale = chart.scales.x;
+                        var yScale = chart.scales.y;
+                        
+                        var currentLogDE50 = state.de50 > 0 ? Math.log10(state.de50) : -4;
+                        var currentLogDL50 = state.dl50 > 0 ? Math.log10(state.dl50) : -4;
+                        
+                        ctx.save();
+                        ctx.font = 'bold 12px Segoe UI';
+                        
+                        var de50X = xScale.getPixelForValue(currentLogDE50);
+                        var de50Y = yScale.getPixelForValue(50);
+                        ctx.fillStyle = '#3b82f6';
+                        ctx.fillText('DE₅₀', de50X + 12, de50Y - 8);
+                        
+                        var dl50X = xScale.getPixelForValue(currentLogDL50);
+                        var dl50Y = yScale.getPixelForValue(50);
+                        ctx.fillStyle = '#ef4444';
+                        ctx.fillText('DL₅₀', dl50X + 12, dl50Y - 8);
+                        
+                        ctx.restore();
+                    }
+                }]
+            };
+
+            var ctx = document.getElementById('main-chart').getContext('2d');
+            mainChart = new Chart(ctx, config);
+        }
+
+        function updateParameters() {
+            var de50Index = parseInt(document.getElementById('de50-slider').value);
+            var dl50Index = parseInt(document.getElementById('dl50-slider').value);
+            var hillIndex = parseInt(document.getElementById('hill-slider').value);
+            
+            var proposedDE50 = de50Values[de50Index];
+            var proposedDL50 = dl50Values[dl50Index];
+            
+            // Asegurar que DL50 > DE50 siempre
+            while (proposedDE50 >= proposedDL50 && dl50Index < dl50Values.length - 1) {
+                dl50Index++;
+                proposedDL50 = dl50Values[dl50Index];
+                document.getElementById('dl50-slider').value = dl50Index;
+            }
+            
+            while (proposedDL50 <= proposedDE50 && de50Index > 0) {
+                de50Index--;
+                proposedDE50 = de50Values[de50Index];
+                document.getElementById('de50-slider').value = de50Index;
+            }
+            
+            state.de50 = proposedDE50;
+            state.dl50 = proposedDL50;
+            state.hillCoeff = hillValues[hillIndex];
+            
+            var logDE50 = state.de50 > 0 ? Math.log10(state.de50).toFixed(2) : 'N/A';
+            var logDL50 = state.dl50 > 0 ? Math.log10(state.dl50).toFixed(2) : 'N/A';
+            
+            document.getElementById('de50-value').textContent = '[' + state.de50 + 'mg] Log=' + logDE50;
+            document.getElementById('dl50-value').textContent = '[' + state.dl50 + 'mg] Log=' + logDL50;
+            document.getElementById('hill-value').textContent = state.hillCoeff.toFixed(1);
+            
+            var it = state.de50 > 0 ? (state.dl50 / state.de50) : 0;
+            document.getElementById('it-result').textContent = it.toFixed(2);
+            
+            var itLabel = document.getElementById('it-label');
+            if (it > 10) {
+                itLabel.textContent = 'Muy seguro';
+                itLabel.style.background = '#10b981';
+                itLabel.style.color = 'white';
+            } else if (it >= 2) {
+                itLabel.textContent = 'Seguro';
+                itLabel.style.background = '#3b82f6';
+                itLabel.style.color = 'white';
+            } else {
+                itLabel.textContent = 'Poco seguro';
+                itLabel.style.background = '#ef4444';
+                itLabel.style.color = 'white';
+            }
+            
+            var de99 = findDoseAtResponse(state.de50, state.hillCoeff, 99);
+            var dl1 = findDoseAtResponse(state.dl50, state.hillCoeff, 1);
+            var ms = de99 > 0 ? (dl1 / de99) : 0;
+            document.getElementById('ms-result').textContent = ms.toFixed(2);
+            
+            var msLabel = document.getElementById('ms-label');
+            if (ms > 10) {
+                msLabel.textContent = 'Muy seguro';
+                msLabel.style.background = '#10b981';
+                msLabel.style.color = 'white';
+            } else if (ms >= 2) {
+                msLabel.textContent = 'Seguro';
+                msLabel.style.background = '#3b82f6';
+                msLabel.style.color = 'white';
+            } else {
+                msLabel.textContent = 'Poco seguro';
+                msLabel.style.background = '#ef4444';
+                msLabel.style.color = 'white';
+            }
+            
+            updateChart();
+        }
+
+        window.onload = function() {
+            updateParameters();
+        };
+    </script>
+</body>
+</html>
